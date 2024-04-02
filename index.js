@@ -3,6 +3,9 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import BigNumber from "bignumber.js";
 import fs from "fs";
 
+const AIRDROP_BLOCK = 4806374; // 2024-04-01 00:00:00 (+UTC)
+const AIRDROP_VDOT_TRESHOLD = 19.38134; // 25 DOT
+
 const DECIMALS = 10;
 const DOT_ID = 5;
 const VDOT_ID = 15;
@@ -13,7 +16,7 @@ const FARM_ADDRESS = "7L53bUT5Bn9vMEubRo1e9xZefRgbPSccgzxejvSfBpwed6Qv";
 const TREASURY_ADDRESS = "7L53bUTBopuwFt3mKUfmkzgGLayYa1Yvn1hAg9v5UMrQzTfh";
 
 const rpc = "wss://rpc.hydradx.cloud";
-const block = parseInt(process.argv[2]);
+const block = AIRDROP_BLOCK || parseInt(process.argv[2]);
 
 async function main() {
   if (Number.isInteger(block) && block > 0) {
@@ -60,6 +63,11 @@ async function main() {
           .dividedBy(10 ** DECIMALS)
           .toString(), // VDOT
       };
+    })
+    .filter((schedule) => {
+      return BigNumber(Object.values(schedule)[0]).isGreaterThan(
+        AIRDROP_VDOT_TRESHOLD
+      );
     });
 
   console.log(
@@ -77,21 +85,21 @@ async function main() {
   );
 
   // Token holders
-  const tokenHolders = await apiAt.query.tokens.accounts.entries();
-  console.log(tokenHolders.length, "token entries");
-  const dotHolders = tokenHolders
-    .filter((holder) => parseInt(holder[0].toHuman()[1]) === DOT_ID)
-    .map(mapHolders);
-  console.log(dotHolders.length, " dot holders");
-  console.log("writing dot-holders.json");
-  fs.writeFileSync("data/dot-holders.json", JSON.stringify(dotHolders, 2, 2));
+  //   const tokenHolders = await apiAt.query.tokens.accounts.entries();
+  //   console.log(tokenHolders.length, "token entries");
+  //   const dotHolders = tokenHolders
+  //     .filter((holder) => parseInt(holder[0].toHuman()[1]) === DOT_ID)
+  //     .map(mapHolders);
+  //   console.log(dotHolders.length, " dot holders");
+  //   console.log("writing dot-holders.json");
+  //   fs.writeFileSync("data/dot-holders.json", JSON.stringify(dotHolders, 2, 2));
 
-  const vdotHolders = tokenHolders
-    .filter((holder) => parseInt(holder[0].toHuman()[1]) === VDOT_ID)
-    .map(mapHolders);
-  console.log(vdotHolders.length, " vdot holders");
-  console.log("writing vdot-holders.json");
-  fs.writeFileSync("data/vdot-holders.json", JSON.stringify(vdotHolders, 2, 2));
+  //   const vdotHolders = tokenHolders
+  //     .filter((holder) => parseInt(holder[0].toHuman()[1]) === VDOT_ID)
+  //     .map(mapHolders);
+  //   console.log(vdotHolders.length, " vdot holders");
+  //   console.log("writing vdot-holders.json");
+  //   fs.writeFileSync("data/vdot-holders.json", JSON.stringify(vdotHolders, 2, 2));
 
   // LPs
   const omnipoolDotData = (await apiAt.query.omnipool.assets(DOT_ID)).toJSON();
@@ -175,11 +183,11 @@ async function main() {
     dotPositions.length,
     "dot positions"
   );
-  console.log("writing dot-positions.json");
-  fs.writeFileSync(
-    "data/dot-positions.json",
-    JSON.stringify(dotPositions, 2, 2)
-  );
+  //   console.log("writing dot-positions.json");
+  //   fs.writeFileSync(
+  //     "data/dot-positions.json",
+  //     JSON.stringify(dotPositions, 2, 2)
+  //   );
 
   const vdotPositions = positions
     .filter((position) => {
@@ -189,6 +197,11 @@ async function main() {
       const id = position[0].toHuman()[0];
       const owner = lmPositionOwners[lmPositions[id]] || positionOwners[id];
       return mapPositions(position, owner, omnipoolVdotData, omnipoolVdot);
+    })
+    .filter((position) => {
+      return BigNumber(position.underlyingAmount).isGreaterThan(
+        AIRDROP_VDOT_TRESHOLD
+      );
     });
 
   const treasuryVdotPosition = vdotPositions.reduce((acc, position) => {
